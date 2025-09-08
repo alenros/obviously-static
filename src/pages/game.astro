@@ -1,0 +1,15 @@
+  <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="timer" id="game-timer">Time: 60s</div>
+            <div class="game-area">
+                <h3 id="current-prompt">Current prompt will appear here</h3>
+                <input type="text" class="word-input" id="word-input" placeholder="Type your word here..." disabled>
+                <button onclick="submitWord()" id="submit-word-btn" disabled>Submit Word</button>
+                
+                <div class="words-submitted">
+                    <h4>Words Submitted</h4>
+                    <div id="submitted-words"></div>
+                </div>
+            </div>
+            <button onclick="leaveRoom()">Leave Game</button>
+        </div>
