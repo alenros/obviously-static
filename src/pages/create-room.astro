@@ -1,0 +1,108 @@
+---
+import Layout from '../components/Layout.astro';
+---
+
+<Layout title="Word Battle - Create Room">
+    <div class="screen active">
+        <h2>Create a Room</h2>
+        <div class="input-group">
+            <label for="room-name">Room Name (Optional)</label>
+            <input type="text" id="room-name" placeholder="Enter room name" maxlength="30">
+        </div>
+        <button id="create-room-btn">Create Room</button>
+        <button id="back-btn">Back</button>
+    </div>
+</Layout>
+
+<script>
+    // Utility functions
+    function generateRoomCode(): string {
+        return Math.random().toString(36).substr(2, 6).toUpperCase();
+    }
+
+    function generatePlayerId(): string {
+        return 'player_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const roomNameInput = document.getElementById('room-name') as HTMLInputElement;
+        const createRoomBtn = document.getElementById('create-room-btn');
+        const backBtn = document.getElementById('back-btn');
+
+        createRoomBtn?.addEventListener('click', async () => {
+            const playerName = localStorage.getItem('playerName');
+            const roomName = roomNameInput?.value.trim() || 'Unnamed Room';
+            
+            if (!playerName) {
+                alert('Player name not found. Please go back to home.');
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                // Import and initialize Firebase
+                const { default: firebase } = await import('firebase/compat/app');
+                await import('firebase/compat/database');
+                
+                // Initialize Firebase if not already initialized
+                if (!firebase.apps.length) {
+                    const firebaseConfig = {
+                        apiKey: "AIzaSyDDVlYgTLskL79p2-h3X6Ma9GJhqAMixOk",
+                        authDomain: "fake-artist-2384e.firebaseapp.com",
+                        databaseURL: "https://fake-artist-2384e-default-rtdb.firebaseio.com/",
+                        projectId: "fake-artist-2384e",
+                        storageBucket: "fake-artist-2384e.firebasestorage.app",
+                        messagingSenderId: "927881312706",
+                        appId: "1:927881312706:web:eb78ec36480a08df01fe5b",
+                        measurementId: "G-68K09NQHX9"
+                    };
+                    firebase.initializeApp(firebaseConfig);
+                }
+                
+                const database = firebase.database();
+                
+                const roomCode = generateRoomCode();
+                const playerId = generatePlayerId();
+                
+                if (!playerId) {
+                    alert('Failed to generate player ID');
+                    return;
+                }
+                
+                const currentPlayer = {
+                    id: playerId,
+                    name: playerName,
+                    isHost: true
+                };
+                
+                const roomData = {
+                    code: roomCode,
+                    name: roomName,
+                    status: 'waiting',
+                    players: {
+                        [playerId]: currentPlayer
+                    },
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    hostId: playerId
+                };
+                
+                await database.ref(`rooms/${roomCode}`).set(roomData);
+                
+                // Store room and player data
+                localStorage.setItem('currentRoom', roomCode);
+                localStorage.setItem('currentPlayer', JSON.stringify(currentPlayer));
+                
+                // Redirect to lobby
+                window.location.href = `/lobby?code=${roomCode}`;
+                
+            } catch (error) {
+                console.error('Error creating room:', error);
+                alert('Failed to create room');
+            }
+        });
+
+        backBtn?.addEventListener('click', () => {
+            window.location.href = '/';
+        });
+    });
+</script>

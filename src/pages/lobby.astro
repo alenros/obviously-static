@@ -1,17 +1,184 @@
-        <!-- Waiting Room Screen -->
-        <div id="waiting-room-screen" class="screen">
-            <h2>Waiting Room</h2>
-            <div class="room-code">
-                <h3>Room Code</h3>
-                <div class="code" id="display-room-code"></div>
-                <p>Share this code with other players</p>
-            </div>
+---
+import Layout from '../components/Layout.astro';
+import RoomCode from '../components/RoomCode.astro';
+import PlayerList from '../components/PlayerList.astro';
+---
+
+<Layout title="Word Battle - Lobby">
+    <div class="screen active">
+        <h2>Waiting Room</h2>
+        <RoomCode />
+        <PlayerList containerId="players-container" title="Players" />
+        <button id="start-game-btn" style="display: none;">Start Game</button>
+        <button id="leave-room-btn">Leave Room</button>
+    </div>
+</Layout>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Get room code from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomCode = urlParams.get('code');
+        
+        if (!roomCode) {
+            alert('No room code provided');
+            window.location.href = '/';
+            return;
+        }
+        
+        // Get current player from localStorage
+        const currentPlayerStr = localStorage.getItem('currentPlayer');
+        if (!currentPlayerStr) {
+            alert('No player data found');
+            window.location.href = '/';
+            return;
+        }
+        
+        const currentPlayer = JSON.parse(currentPlayerStr);
+        
+        // Display room code
+        const roomCodeDisplay = document.getElementById('display-room-code');
+        if (roomCodeDisplay) {
+            roomCodeDisplay.textContent = roomCode;
+        }
+        
+        // Import and initialize Firebase
+        const { default: firebase } = await import('firebase/compat/app');
+        await import('firebase/compat/database');
+        
+        // Initialize Firebase if not already initialized
+        if (!firebase.apps.length) {
+            const firebaseConfig = {
+                apiKey: "AIzaSyDDVlYgTLskL79p2-h3X6Ma9GJhqAMixOk",
+                authDomain: "fake-artist-2384e.firebaseapp.com",
+                databaseURL: "https://fake-artist-2384e-default-rtdb.firebaseio.com/",
+                projectId: "fake-artist-2384e",
+                storageBucket: "fake-artist-2384e.firebasestorage.app",
+                messagingSenderId: "927881312706",
+                appId: "1:927881312706:web:eb78ec36480a08df01fe5b",
+                measurementId: "G-68K09NQHX9"
+            };
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const database = firebase.database();
+        
+        // Function to update players list
+        function updatePlayersList(players: any) {
+            const container = document.getElementById('players-container');
+            if (!container || !players) return;
             
-            <div class="players-list">
-                <h3>Players</h3>
-                <div id="players-container"></div>
-            </div>
+            container.innerHTML = '';
             
-            <button id="start-game-btn" onclick="startGame()" style="display: none;">Start Game</button>
-            <button onclick="leaveRoom()">Leave Room</button>
-        </div>
+            Object.values(players).forEach((player: any) => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'player';
+                playerDiv.innerHTML = `
+                    <span class="player-name">${player.name}</span>
+                    ${player.isHost ? '<span class="player-status">Host</span>' : ''}
+                `;
+                container.appendChild(playerDiv);
+            });
+        }
+        
+        // Listen for room updates
+        database.ref(`rooms/${roomCode}`).on('value', (snapshot) => {
+            const roomData = snapshot.val();
+            if (!roomData) {
+                alert('Room no longer exists');
+                window.location.href = '/';
+                return;
+            }
+            
+            updatePlayersList(roomData.players);
+            
+            // Show start button only to host
+            const startBtn = document.getElementById('start-game-btn');
+            if (startBtn && currentPlayer.isHost) {
+                const playerCount = Object.keys(roomData.players || {}).length;
+                startBtn.style.display = playerCount >= 2 ? 'block' : 'none';
+            }
+            
+            // Check if game started
+            if (roomData.status === 'playing') {
+                window.location.href = `/game?code=${roomCode}`;
+            }
+        });
+        
+        // Start game button handler
+        const startGameBtn = document.getElementById('start-game-btn');
+        startGameBtn?.addEventListener('click', async () => {
+            if (!currentPlayer.isHost) return;
+            
+            try {
+                // Sample prompts and words
+                const prompts = [
+                    "Animals", "Foods", "Colors", "Countries", "Movies",
+                    "Sports", "Professions", "Things that are round",
+                    "Things you find in a kitchen", "Words that start with 'B'"
+                ];
+                
+                const wordsByPrompt: { [key: string]: string[] } = {
+                    "Animals": ["cat", "dog", "elephant", "tiger", "bird", "fish", "horse", "cow"],
+                    "Foods": ["pizza", "burger", "salad", "pasta", "soup", "bread", "cheese", "fruit"],
+                    "Colors": ["red", "blue", "green", "yellow", "purple", "orange", "pink", "black"],
+                    "Countries": ["france", "japan", "brazil", "canada", "italy", "spain", "germany", "china"],
+                    "Movies": ["avatar", "titanic", "batman", "superman", "starwars", "marvel", "disney", "action"],
+                    "Sports": ["football", "basketball", "tennis", "soccer", "baseball", "swimming", "running", "golf"],
+                    "Professions": ["doctor", "teacher", "engineer", "artist", "chef", "pilot", "nurse", "lawyer"],
+                    "Things that are round": ["ball", "coin", "wheel", "planet", "orange", "clock", "ring", "button"],
+                    "Things you find in a kitchen": ["stove", "fridge", "knife", "plate", "cup", "spoon", "sink", "oven"],
+                    "Words that start with 'B'": ["banana", "butterfly", "book", "building", "bridge", "bottle", "bicycle", "bird"]
+                };
+                
+                // Select random prompt and secret word
+                const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+                const wordsForPrompt = wordsByPrompt[randomPrompt] || [];
+                const secretWord = wordsForPrompt[Math.floor(Math.random() * wordsForPrompt.length)] || 'default';
+                
+                // Get all players and randomly select one to be "it"
+                const roomSnapshot = await database.ref(`rooms/${roomCode}`).once('value');
+                const roomData = roomSnapshot.val();
+                const playerIds = Object.keys(roomData.players || {});
+                const selectedPlayerId = playerIds[Math.floor(Math.random() * playerIds.length)];
+                
+                const gameData = {
+                    status: 'playing',
+                    prompt: randomPrompt,
+                    secretWord: secretWord,
+                    selectedPlayerId: selectedPlayerId,
+                    startTime: Date.now(),
+                    duration: 180, // 3 minutes
+                    submissions: {}
+                };
+                
+                await database.ref(`rooms/${roomCode}`).update(gameData);
+                
+            } catch (error) {
+                console.error('Error starting game:', error);
+                alert('Failed to start game');
+            }
+        });
+        
+        // Leave room button handler
+        const leaveRoomBtn = document.getElementById('leave-room-btn');
+        leaveRoomBtn?.addEventListener('click', async () => {
+            try {
+                await database.ref(`rooms/${roomCode}/players/${currentPlayer.id}`).remove();
+                
+                // Clean up listeners
+                database.ref(`rooms/${roomCode}`).off();
+                
+                // Clear localStorage
+                localStorage.removeItem('currentRoom');
+                localStorage.removeItem('currentPlayer');
+                
+                window.location.href = '/';
+                
+            } catch (error) {
+                console.error('Error leaving room:', error);
+                alert('Failed to leave room');
+            }
+        });
+    });
+</script>

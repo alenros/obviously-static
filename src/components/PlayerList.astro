@@ -1,0 +1,20 @@
+---
+export interface Props {
+    containerId: string;
+    title?: string;
+    showGameStatus?: boolean;
+}
+
+const { containerId, title = "Players", showGameStatus = false } = Astro.props;
+---
+
+<div class="players-list">
+    <h3>{title}</h3>
+    <div id={containerId}></div>
+</div>
+
+<script define:vars={{ containerId, showGameStatus }}>
+    // This will be available in the client-side JavaScript
+    window.playerListConfig = window.playerListConfig || {};
+    window.playerListConfig[containerId] = { showGameStatus };
+</script>

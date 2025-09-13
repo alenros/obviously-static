@@ -1,0 +1,113 @@
+---
+import Layout from '../components/Layout.astro';
+---
+
+<Layout title="Word Battle - Join Room">
+    <div class="screen active">
+        <h2>Join a Room</h2>
+        <div class="input-group">
+            <label for="join-code">Room Code</label>
+            <input type="text" id="join-code" placeholder="Enter 6-digit code" maxlength="6">
+        </div>
+        <button id="join-room-btn">Join Room</button>
+        <button id="back-btn">Back</button>
+    </div>
+</Layout>
+
+<script>
+    function generatePlayerId(): string {
+        return 'player_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const joinCodeInput = document.getElementById('join-code') as HTMLInputElement;
+        const joinRoomBtn = document.getElementById('join-room-btn');
+        const backBtn = document.getElementById('back-btn');
+
+        joinRoomBtn?.addEventListener('click', async () => {
+            const playerName = localStorage.getItem('playerName');
+            const roomCode = joinCodeInput?.value.trim().toUpperCase();
+            
+            if (!playerName) {
+                alert('Player name not found. Please go back to home.');
+                window.location.href = '/';
+                return;
+            }
+            
+            if (!roomCode) {
+                alert('Please enter a room code');
+                return;
+            }
+            
+            if (roomCode.length !== 6) {
+                alert('Room code must be 6 characters');
+                return;
+            }
+            
+            try {
+                // Import and initialize Firebase
+                const { default: firebase } = await import('firebase/compat/app');
+                await import('firebase/compat/database');
+                
+                // Initialize Firebase if not already initialized
+                if (!firebase.apps.length) {
+                    const firebaseConfig = {
+                        apiKey: "AIzaSyDDVlYgTLskL79p2-h3X6Ma9GJhqAMixOk",
+                        authDomain: "fake-artist-2384e.firebaseapp.com",
+                        databaseURL: "https://fake-artist-2384e-default-rtdb.firebaseio.com/",
+                        projectId: "fake-artist-2384e",
+                        storageBucket: "fake-artist-2384e.firebasestorage.app",
+                        messagingSenderId: "927881312706",
+                        appId: "1:927881312706:web:eb78ec36480a08df01fe5b",
+                        measurementId: "G-68K09NQHX9"
+                    };
+                    firebase.initializeApp(firebaseConfig);
+                }
+                
+                const database = firebase.database();
+                
+                const roomSnapshot = await database.ref(`rooms/${roomCode}`).once('value');
+                
+                if (!roomSnapshot.exists()) {
+                    alert('Room not found');
+                    return;
+                }
+                
+                const roomData = roomSnapshot.val();
+                
+                if (roomData.status === 'playing') {
+                    alert('Game is already in progress');
+                    return;
+                }
+                
+                const playerId = generatePlayerId();
+                
+                const currentPlayer = {
+                    id: playerId,
+                    name: playerName,
+                    isHost: false
+                };
+                
+                await database.ref(`rooms/${roomCode}/players/${playerId}`).set(currentPlayer);
+                
+                // Store room and player data
+                localStorage.setItem('currentRoom', roomCode);
+                localStorage.setItem('currentPlayer', JSON.stringify(currentPlayer));
+                
+                // Redirect to lobby
+                window.location.href = `/lobby?code=${roomCode}`;
+                
+            } catch (error) {
+                console.error('Error joining room:', error);
+                alert('Failed to join room');
+            }
+        });
+
+        backBtn?.addEventListener('click', () => {
+            window.location.href = '/';
+        });
+
+        // Auto-focus the input field
+        joinCodeInput?.focus();
+    });
+</script>

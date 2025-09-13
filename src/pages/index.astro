@@ -1,96 +1,57 @@
 ---
-
+import Layout from '../components/Layout.astro';
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Word Battle - Multiplayer Game</title>
-    <link href="/src/styles/styles.css" rel="stylesheet" type="text/css">
-    <script type="module" src="/src/scripts/main.ts" defer></script>
-</head>
-<body>
-    <div class="container">
-        <h1>Word Battle</h1>
-        
-        <!-- Home Screen -->
-        <div id="home-screen" class="screen active">
-            <div class="input-group">
-                <label for="player-name">Your Name</label>
-                <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
-            </div>
-            <button onclick="showCreateRoom()">Create Room</button>
-            <button onclick="showJoinRoom()">Join Room</button>
+<Layout title="Word Battle - Home">
+    <div id="home-screen" class="screen active">
+        <div class="input-group">
+            <label for="player-name">Your Name</label>
+            <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
         </div>
-
-        <div id="create-room-screen" class="screen">
-            <h2>Create a Room</h2>
-            <div class="input-group">
-                <label for="room-name">Room Name (Optional)</label>
-                <input type="text" id="room-name" placeholder="Enter room name" maxlength="30">
-            </div>
-            <button onclick="createRoom()">Create Room</button>
-            <button onclick="showHome()">Back</button>
-        </div>
-
-
-		<div id="join-room-screen" class="screen">
-            <h2>Join a Room</h2>
-            <div class="input-group">
-                <label for="join-code">Room Code</label>
-                <input type="text" id="join-code" placeholder="Enter 6-digit code" maxlength="6">
-            </div>
-            <button onclick="joinRoom()">Join Room</button>
-            <button onclick="showHome()">Back</button>
-        </div>
-
-        <!-- Waiting Room Screen -->
-        <div id="waiting-room-screen" class="screen">
-            <h2>Waiting Room</h2>
-            <div class="room-code">
-                <h3>Room Code</h3>
-                <div class="code" id="display-room-code"></div>
-                <p>Share this code with other players</p>
-            </div>
-            
-            <div class="players-list">
-                <h3>Players</h3>
-                <div id="players-container"></div>
-            </div>
-            
-            <button id="start-game-btn" onclick="startGame()" style="display: none;">Start Game</button>
-            <button onclick="leaveRoom()">Leave Room</button>
-        </div>
-
-        <!-- Game Screen -->
-        <div id="game-screen" class="screen">
-            <div class="timer" id="game-timer">Time: 60s</div>
-            <div class="game-area">
-                <h3 id="current-prompt">Current prompt will appear here</h3>
-                <div id="secret-word-display" style="display: none;">
-                    <h4>Secret Word:</h4>
-                    <div class="secret-word" id="secret-word"></div>
-                </div>
-                <input type="text" class="word-input" id="word-input" placeholder="Type your word here..." disabled>
-                <button onclick="submitWord()" id="submit-word-btn" disabled>Submit Word</button>
-                
-                <div class="players-list">
-                    <h4>Players in Game</h4>
-                    <div id="game-players-container"></div>
-                </div>
-                
-                <div class="words-submitted">
-                    <h4>Words Submitted</h4>
-                    <div id="submitted-words"></div>
-                </div>
-            </div>
-            <button onclick="leaveRoom()">Leave Game</button>
-        </div>
-
-        <div id="message-area"></div>
+        <button id="create-room-btn">Create Room</button>
+        <button id="join-room-btn">Join Room</button>
     </div>
+</Layout>
 
-</body>
-</html>
+<script>
+    // Handle navigation to different pages
+    document.addEventListener('DOMContentLoaded', () => {
+        const playerNameInput = document.getElementById('player-name') as HTMLInputElement;
+        const createRoomBtn = document.getElementById('create-room-btn');
+        const joinRoomBtn = document.getElementById('join-room-btn');
+
+        // Store player name in localStorage when navigating
+        const storePlayerName = () => {
+            const playerName = playerNameInput?.value.trim();
+            if (playerName) {
+                localStorage.setItem('playerName', playerName);
+            }
+        };
+
+        createRoomBtn?.addEventListener('click', () => {
+            const playerName = playerNameInput?.value.trim();
+            if (!playerName) {
+                alert('Please enter your name');
+                return;
+            }
+            storePlayerName();
+            window.location.href = '/create-room';
+        });
+
+        joinRoomBtn?.addEventListener('click', () => {
+            const playerName = playerNameInput?.value.trim();
+            if (!playerName) {
+                alert('Please enter your name');
+                return;
+            }
+            storePlayerName();
+            window.location.href = '/join';
+        });
+
+        // Restore player name if returning to home page
+        const savedPlayerName = localStorage.getItem('playerName');
+        if (savedPlayerName && playerNameInput) {
+            playerNameInput.value = savedPlayerName;
+        }
+    });
+</script>

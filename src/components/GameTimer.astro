@@ -1,0 +1,9 @@
+---
+export interface Props {
+    timerId?: string;
+}
+
+const { timerId = "game-timer" } = Astro.props;
+---
+
+<div class="timer" id={timerId}>Time: 60s</div>
