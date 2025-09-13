@@ -2,40 +2,45 @@
 import Layout from '../components/Layout.astro';
 ---
 
-<Layout title="Word Battle - Create Room">
+<Layout title="Word Battle - Join Room">
     <div class="screen active">
-        <h2>Create a Room</h2>
+        <h2>Join a Room</h2>
         <div class="input-group">
-            <label for="room-name">Room Name (Optional)</label>
-            <input type="text" id="room-name" placeholder="Enter room name" maxlength="30">
+            <label for="join-code">Room Code</label>
+            <input type="text" id="join-code" placeholder="Enter 6-digit code" maxlength="6">
         </div>
-        <button id="create-room-btn">Create Room</button>
+        <button id="join-room-btn">Join Room</button>
         <button id="back-btn">Back</button>
     </div>
 </Layout>
 
 <script>
-    // Utility functions
-    function generateRoomCode(): string {
-        return Math.random().toString(36).substr(2, 6).toUpperCase();
-    }
-
     function generatePlayerId(): string {
         return 'player_' + Math.random().toString(36).substr(2, 9);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const roomNameInput = document.getElementById('room-name') as HTMLInputElement;
-        const createRoomBtn = document.getElementById('create-room-btn');
+        const joinCodeInput = document.getElementById('join-code') as HTMLInputElement;
+        const joinRoomBtn = document.getElementById('join-room-btn');
         const backBtn = document.getElementById('back-btn');
 
-        createRoomBtn?.addEventListener('click', async () => {
+        joinRoomBtn?.addEventListener('click', async () => {
             const playerName = localStorage.getItem('playerName');
-            const roomName = roomNameInput?.value.trim() || 'Unnamed Room';
+            const roomCode = joinCodeInput?.value.trim().toUpperCase();
             
             if (!playerName) {
                 alert('Player name not found. Please go back to home.');
                 window.location.href = '/';
+                return;
+            }
+            
+            if (!roomCode) {
+                alert('Please enter a room code');
+                return;
+            }
+            
+            if (roomCode.length !== 6) {
+                alert('Room code must be 6 characters');
                 return;
             }
             
@@ -61,32 +66,29 @@ import Layout from '../components/Layout.astro';
                 
                 const database = firebase.database();
                 
-                const roomCode = generateRoomCode();
-                const playerId = generatePlayerId();
+                const roomSnapshot = await database.ref(`rooms/${roomCode}`).once('value');
                 
-                if (!playerId) {
-                    alert('Failed to generate player ID');
+                if (!roomSnapshot.exists()) {
+                    alert('Room not found');
                     return;
                 }
+                
+                const roomData = roomSnapshot.val();
+                
+                if (roomData.status === 'playing') {
+                    alert('Game is already in progress');
+                    return;
+                }
+                
+                const playerId = generatePlayerId();
                 
                 const currentPlayer = {
                     id: playerId,
                     name: playerName,
-                    isHost: true
+                    isHost: false
                 };
                 
-                const roomData = {
-                    code: roomCode,
-                    name: roomName,
-                    status: 'waiting',
-                    players: {
-                        [playerId]: currentPlayer
-                    },
-                    createdAt: firebase.database.ServerValue.TIMESTAMP,
-                    hostId: playerId
-                };
-                
-                await database.ref(`rooms/${roomCode}`).set(roomData);
+                await database.ref(`rooms/${roomCode}/players/${playerId}`).set(currentPlayer);
                 
                 // Store room and player data
                 localStorage.setItem('currentRoom', roomCode);
@@ -96,13 +98,16 @@ import Layout from '../components/Layout.astro';
                 window.location.href = `/lobby?code=${roomCode}`;
                 
             } catch (error) {
-                console.error('Error creating room:', error);
-                alert('Failed to create room');
+                console.error('Error joining room:', error);
+                alert('Failed to join room');
             }
         });
 
         backBtn?.addEventListener('click', () => {
             window.location.href = '/';
         });
+
+        // Auto-focus the input field
+        joinCodeInput?.focus();
     });
 </script>

@@ -1,54 +1,57 @@
 ---
-
+import Layout from '../components/Layout.astro';
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Word Battle - Multiplayer Game</title>
-    <link href="/src/styles/styles.css"rel="stylesheet" type="text/css">
-	<script type="module" src="/src/client/main" defer></script>
-</head>
-<body>
-    <div class="container">
-        <h1>Word Battle</h1>
-        
-        <!-- Home Screen -->
-        <div id="home-screen" class="screen active">
-            <div class="input-group">
-                <label for="player-name">Your Name</label>
-                <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
-            </div>
-            <button onclick="showCreateRoom()">Create Room</button>
-            <button onclick="showJoinRoom()">Join Room</button>
+<Layout title="Word Battle - Home">
+    <div id="home-screen" class="screen active">
+        <div class="input-group">
+            <label for="player-name">Your Name</label>
+            <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
         </div>
-
-        <div id="create-room-screen" class="screen">
-            <h2>Create a Room</h2>
-            <div class="input-group">
-                <label for="room-name">Room Name (Optional)</label>
-                <input type="text" id="room-name" placeholder="Enter room name" maxlength="30">
-            </div>
-            <button onclick="createRoom()">Create Room</button>
-            <button onclick="showHome()">Back</button>
-        </div>
-
-
-		<div id="join-room-screen" class="screen">
-            <h2>Join a Room</h2>
-            <div class="input-group">
-                <label for="join-code">Room Code</label>
-                <input type="text" id="join-code" placeholder="Enter 6-digit code" maxlength="6">
-            </div>
-            <button onclick="joinRoom()">Join Room</button>
-            <button onclick="showHome()">Back</button>
-        </div>
-		
-
-        <div id="message-area"></div>
+        <button id="create-room-btn">Create Room</button>
+        <button id="join-room-btn">Join Room</button>
     </div>
+</Layout>
 
-</body>
-</html>
+<script>
+    // Handle navigation to different pages
+    document.addEventListener('DOMContentLoaded', () => {
+        const playerNameInput = document.getElementById('player-name') as HTMLInputElement;
+        const createRoomBtn = document.getElementById('create-room-btn');
+        const joinRoomBtn = document.getElementById('join-room-btn');
+
+        // Store player name in localStorage when navigating
+        const storePlayerName = () => {
+            const playerName = playerNameInput?.value.trim();
+            if (playerName) {
+                localStorage.setItem('playerName', playerName);
+            }
+        };
+
+        createRoomBtn?.addEventListener('click', () => {
+            const playerName = playerNameInput?.value.trim();
+            if (!playerName) {
+                alert('Please enter your name');
+                return;
+            }
+            storePlayerName();
+            window.location.href = '/create-room';
+        });
+
+        joinRoomBtn?.addEventListener('click', () => {
+            const playerName = playerNameInput?.value.trim();
+            if (!playerName) {
+                alert('Please enter your name');
+                return;
+            }
+            storePlayerName();
+            window.location.href = '/join';
+        });
+
+        // Restore player name if returning to home page
+        const savedPlayerName = localStorage.getItem('playerName');
+        if (savedPlayerName && playerNameInput) {
+            playerNameInput.value = savedPlayerName;
+        }
+    });
+</script>

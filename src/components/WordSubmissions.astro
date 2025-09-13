@@ -1,0 +1,13 @@
+---
+export interface Props {
+    containerId?: string;
+    title?: string;
+}
+
+const { containerId = "submitted-words", title = "Words Submitted" } = Astro.props;
+---
+
+<div class="words-submitted">
+    <h4>{title}</h4>
+    <div id={containerId}></div>
+</div>
