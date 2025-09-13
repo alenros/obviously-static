@@ -8,8 +8,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Word Battle - Multiplayer Game</title>
-    <link href="/src/styles/styles.css"rel="stylesheet" type="text/css">
-	<script type="module" src="/src/client/main" defer></script>
+    <link href="/src/styles/styles.css" rel="stylesheet" type="text/css">
+    <script type="module" src="/src/scripts/main.ts" defer></script>
 </head>
 <body>
     <div class="container">
@@ -45,7 +45,49 @@
             <button onclick="joinRoom()">Join Room</button>
             <button onclick="showHome()">Back</button>
         </div>
-		
+
+        <!-- Waiting Room Screen -->
+        <div id="waiting-room-screen" class="screen">
+            <h2>Waiting Room</h2>
+            <div class="room-code">
+                <h3>Room Code</h3>
+                <div class="code" id="display-room-code"></div>
+                <p>Share this code with other players</p>
+            </div>
+            
+            <div class="players-list">
+                <h3>Players</h3>
+                <div id="players-container"></div>
+            </div>
+            
+            <button id="start-game-btn" onclick="startGame()" style="display: none;">Start Game</button>
+            <button onclick="leaveRoom()">Leave Room</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="timer" id="game-timer">Time: 60s</div>
+            <div class="game-area">
+                <h3 id="current-prompt">Current prompt will appear here</h3>
+                <div id="secret-word-display" style="display: none;">
+                    <h4>Secret Word:</h4>
+                    <div class="secret-word" id="secret-word"></div>
+                </div>
+                <input type="text" class="word-input" id="word-input" placeholder="Type your word here..." disabled>
+                <button onclick="submitWord()" id="submit-word-btn" disabled>Submit Word</button>
+                
+                <div class="players-list">
+                    <h4>Players in Game</h4>
+                    <div id="game-players-container"></div>
+                </div>
+                
+                <div class="words-submitted">
+                    <h4>Words Submitted</h4>
+                    <div id="submitted-words"></div>
+                </div>
+            </div>
+            <button onclick="leaveRoom()">Leave Game</button>
+        </div>
 
         <div id="message-area"></div>
     </div>
