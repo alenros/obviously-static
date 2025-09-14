@@ -49,26 +49,9 @@ import WordSubmissions from '../components/WordSubmissions.astro';
         
         const currentPlayer = JSON.parse(currentPlayerStr);
         
-        // Import and initialize Firebase
-        const { default: firebase } = await import('firebase/compat/app');
-        await import('firebase/compat/database');
-        
-        // Initialize Firebase if not already initialized
-        if (!firebase.apps.length) {
-            const firebaseConfig = {
-                apiKey: "AIzaSyDDVlYgTLskL79p2-h3X6Ma9GJhqAMixOk",
-                authDomain: "fake-artist-2384e.firebaseapp.com",
-                databaseURL: "https://fake-artist-2384e-default-rtdb.firebaseio.com/",
-                projectId: "fake-artist-2384e",
-                storageBucket: "fake-artist-2384e.firebasestorage.app",
-                messagingSenderId: "927881312706",
-                appId: "1:927881312706:web:eb78ec36480a08df01fe5b",
-                measurementId: "G-68K09NQHX9"
-            };
-            firebase.initializeApp(firebaseConfig);
-        }
-        
-        const database = firebase.database();
+        // Import Firebase singleton
+        const { getDatabase, firebase } = await import('../lib/firebase');
+        const database = getDatabase();
         
         // Get initial room data and start the game
         const roomSnapshot = await database.ref(`rooms/${roomCode}`).once('value');
