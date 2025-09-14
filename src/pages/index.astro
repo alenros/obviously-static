@@ -14,6 +14,15 @@ import Layout from '../components/Layout.astro';
 </Layout>
 
 <script>
+    // Utility functions
+    function generateRoomCode(): string {
+        return Math.random().toString(36).substr(2, 6).toUpperCase();
+    }
+
+    function generatePlayerId(): string {
+        return 'player_' + Math.random().toString(36).substr(2, 9);
+    }
+
     // Handle navigation to different pages
     document.addEventListener('DOMContentLoaded', () => {
         const playerNameInput = document.getElementById('player-name') as HTMLInputElement;
@@ -28,14 +37,58 @@ import Layout from '../components/Layout.astro';
             }
         };
 
-        createRoomBtn?.addEventListener('click', () => {
+        createRoomBtn?.addEventListener('click', async () => {
             const playerName = playerNameInput?.value.trim();
             if (!playerName) {
                 alert('Please enter your name');
                 return;
             }
+            
             storePlayerName();
-            window.location.href = '/create-room';
+            
+            try {
+                // Import Firebase singleton
+                const { getDatabase, firebase } = await import('../lib/firebase');
+                const database = getDatabase();
+                
+                const roomCode = generateRoomCode();
+                const playerId = generatePlayerId();
+                
+                if (!playerId) {
+                    alert('Failed to generate player ID');
+                    return;
+                }
+                
+                const currentPlayer = {
+                    id: playerId,
+                    name: playerName,
+                    isHost: true
+                };
+                
+                const roomData = {
+                    code: roomCode,
+                    name: `${playerName}'s Room`, // Auto-generate room name using player name
+                    status: 'waiting',
+                    players: {
+                        [playerId]: currentPlayer
+                    },
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    hostId: playerId
+                };
+                
+                await database.ref(`rooms/${roomCode}`).set(roomData);
+                
+                // Store room and player data
+                localStorage.setItem('currentRoom', roomCode);
+                localStorage.setItem('currentPlayer', JSON.stringify(currentPlayer));
+                
+                // Redirect to lobby
+                window.location.href = `/lobby?code=${roomCode}`;
+                
+            } catch (error) {
+                console.error('Error creating room:', error);
+                alert('Failed to create room');
+            }
         });
 
         joinRoomBtn?.addEventListener('click', () => {
