@@ -1,0 +1,26 @@
+import type { Word } from './word';
+
+export const words: Word[] = [
+    { text: 'Apple', category: 'Fruit' },
+    { text: 'Banana', category: 'Fruit' },
+    { text: 'Carrot', category: 'Vegetable' },
+    { text: 'Dragonfruit', category: 'Fruit' },
+    { text: 'Eggplant', category: 'Vegetable' },
+    { text: 'Fig', category: 'Fruit' },
+    { text: 'Grape', category: 'Fruit' },
+    { text: 'Honeydew', category: 'Fruit' },
+    { text: 'Iceberg Lettuce', category: 'Vegetable' },
+    { text: 'Jackfruit', category: 'Fruit' },
+    { text: 'Kale', category: 'Vegetable' },
+    { text: 'Lemon', category: 'Fruit' },
+    { text: 'Mango', category: 'Fruit' },
+    { text: 'Nectarine', category: 'Fruit' },
+    { text: 'Olive', category: 'Fruit' },
+    { text: 'Pepper', category: 'Vegetable' },
+    { text: 'Quince', category: 'Fruit' },
+    { text: 'Radish', category: 'Vegetable' },
+    { text: 'Spinach', category: 'Vegetable' },
+    { text: 'Tomato', category: 'Fruit' },
+    { text: 'Ugli Fruit', category: 'Fruit' },
+    { text: 'Zucchini', category: 'Vegetable' },
+];

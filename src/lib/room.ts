@@ -1,14 +1,16 @@
+import type { GameStatus } from './game-status';
 import type { Player } from './player';
+import type { Word } from './word';
 
 export interface Room {
     code: string;
     name: string;
-    status: 'waiting' | 'playing' | 'finished';
+    status: GameStatus;
     players: { [key: string]: Player };
     createdAt: any;
     hostId: string;
     prompt?: string;
-    secretWord?: string;
+    secretWord?: Word;
     selectedPlayerId?: string;
     startTime?: any;
     duration?: number;

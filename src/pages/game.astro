@@ -26,7 +26,9 @@ import WordSubmissions from '../components/WordSubmissions.astro';
 </Layout>
 
 <script>
-    let gameTimer: number | null = null;
+import type { Room } from '../lib/room';
+
+    let gameTimer: NodeJS.Timeout | null = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
         // Get room code from URL parameters
@@ -55,7 +57,7 @@ import WordSubmissions from '../components/WordSubmissions.astro';
         
         // Get initial room data and start the game
         const roomSnapshot = await database.ref(`rooms/${roomCode}`).once('value');
-        const roomData = roomSnapshot.val();
+        const roomData : Room = roomSnapshot.val();
         
         if (!roomData || roomData.status !== 'playing') {
             alert('Game not found or not started');
@@ -125,7 +127,7 @@ import WordSubmissions from '../components/WordSubmissions.astro';
         }
         
         // Function to start game screen
-        function startGameScreen(roomData: any) {
+        function startGameScreen(roomData: Room) {
             // Clean up any existing timer first
             if (gameTimer) {
                 clearInterval(gameTimer);
@@ -146,7 +148,7 @@ import WordSubmissions from '../components/WordSubmissions.astro';
             // Show secret word to all players except the selected one
             if (currentPlayer && roomData.selectedPlayerId !== currentPlayer.id) {
                 if (secretWordElement) {
-                    secretWordElement.textContent = roomData.secretWord;
+                    secretWordElement.textContent = roomData.secretWord!;
                 }
                 if (secretWordDisplay) {
                     secretWordDisplay.style.display = 'block';
@@ -162,7 +164,7 @@ import WordSubmissions from '../components/WordSubmissions.astro';
             if (submitBtn) submitBtn.disabled = false;
             
             // Update players list for game screen
-            updateGamePlayersList(roomData.players, roomData.selectedPlayerId);
+            updateGamePlayersList(roomData.players, roomData.selectedPlayerId!);
             
             // Start timer
             const startTime = roomData.startTime || Date.now();
