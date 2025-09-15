@@ -27,249 +27,72 @@ import WordSubmissions from '../components/WordSubmissions.astro';
 
 <script>
 import type { Room } from '../lib/room';
+import { createGameController } from '../lib/game-controller';
+import { createGameEventHandler } from '../lib/game-events';
 
-    let gameTimer: NodeJS.Timeout | null = null;
+    let gameController: any = null;
+    let eventHandler: any = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
-        // Get room code from URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const roomCode = urlParams.get('code');
-        
-        if (!roomCode) {
-            alert('No room code provided');
-            window.location.href = '/';
-            return;
-        }
-        
-        // Get current player from localStorage
-        const currentPlayerStr = localStorage.getItem('currentPlayer');
-        if (!currentPlayerStr) {
-            alert('No player data found');
-            window.location.href = '/';
-            return;
-        }
-        
-        const currentPlayer = JSON.parse(currentPlayerStr);
-        
-        // Import Firebase singleton
-        const { getDatabase, firebase } = await import('../lib/firebase');
-        const database = getDatabase();
-        
-        // Get initial room data and start the game
-        const roomSnapshot = await database.ref(`rooms/${roomCode}`).once('value');
-        const roomData : Room = roomSnapshot.val();
-        
-        if (!roomData || roomData.status !== 'playing') {
-            alert('Game not found or not started');
-            window.location.href = '/';
-            return;
-        }
-        
-        // Initialize game UI
-        startGameScreen(roomData);
-        
-        // Function to update game players list
-        function updateGamePlayersList(players: any, selectedPlayerId: string) {
-            const container = document.getElementById('game-players-container');
-            if (!container || !players) return;
+        try {
+            // Get room code from URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomCode = urlParams.get('code');
             
-            container.innerHTML = '';
-            
-            Object.values(players).forEach((player: any) => {
-                const playerDiv = document.createElement('div');
-                playerDiv.className = 'player';
-                const isSelected = player.id === selectedPlayerId;
-                playerDiv.innerHTML = `
-                    <span class="player-name">${player.name}</span>
-                    ${isSelected ? '<span class="player-status" style="background: #dc3545;">Doesn\'t Know</span>' : 
-                                  '<span class="player-status">Knows Word</span>'}
-                `;
-                container.appendChild(playerDiv);
-            });
-        }
-        
-        // Function to start the game timer
-        function startServerBasedTimer(startTime: number, duration: number) {
-            const timerElement = document.getElementById('game-timer');
-            
-            const updateTimer = () => {
-                const now = Date.now();
-                const elapsed = Math.floor((now - startTime) / 1000);
-                const timeLeft = Math.max(0, duration - elapsed);
-                
-                const minutes = Math.floor(timeLeft / 60);
-                const seconds = timeLeft % 60;
-                
-                if (timerElement) {
-                    timerElement.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-                }
-                
-                if (timeLeft <= 0) {
-                    if (gameTimer) {
-                        clearInterval(gameTimer);
-                        gameTimer = null;
-                    }
-                    endGame();
-                    return;
-                }
-            };
-            
-            // Clear any existing timer
-            if (gameTimer) {
-                clearInterval(gameTimer);
-            }
-            
-            // Update immediately
-            updateTimer();
-            
-            // Start the interval
-            gameTimer = setInterval(updateTimer, 1000);
-        }
-        
-        // Function to start game screen
-        function startGameScreen(roomData: Room) {
-            // Clean up any existing timer first
-            if (gameTimer) {
-                clearInterval(gameTimer);
-                gameTimer = null;
-            }
-            
-            // Set up game UI
-            const promptElement = document.getElementById('current-prompt');
-            const secretWordElement = document.getElementById('secret-word');
-            const secretWordDisplay = document.getElementById('secret-word-display');
-            const wordInput = document.getElementById('word-input') as HTMLInputElement;
-            const submitBtn = document.getElementById('submit-word-btn') as HTMLButtonElement;
-            
-            if (promptElement) {
-                promptElement.textContent = `Category: ${roomData.prompt}`;
-            }
-            
-            // Show secret word to all players except the selected one
-            if (currentPlayer && roomData.selectedPlayerId !== currentPlayer.id) {
-                if (secretWordElement) {
-                    secretWordElement.textContent = roomData.secretWord!;
-                }
-                if (secretWordDisplay) {
-                    secretWordDisplay.style.display = 'block';
-                }
-            } else {
-                if (secretWordDisplay) {
-                    secretWordDisplay.style.display = 'none';
-                }
-            }
-            
-            // Enable input and button
-            if (wordInput) wordInput.disabled = false;
-            if (submitBtn) submitBtn.disabled = false;
-            
-            // Update players list for game screen
-            updateGamePlayersList(roomData.players, roomData.selectedPlayerId!);
-            
-            // Start timer
-            const startTime = roomData.startTime || Date.now();
-            startServerBasedTimer(startTime, roomData.duration || 180);
-        }
-        
-        // Function to update submissions list
-        function updateSubmissionsList(submissions: any) {
-            const container = document.getElementById('submitted-words');
-            if (!container) return;
-            
-            container.innerHTML = '';
-            
-            Object.values(submissions).forEach((submission: any) => {
-                const submissionDiv = document.createElement('div');
-                submissionDiv.className = 'word-item';
-                submissionDiv.innerHTML = `
-                    <span>${submission.playerName}: ${submission.word}</span>
-                `;
-                container.appendChild(submissionDiv);
-            });
-        }
-        
-        // Function to end game
-        function endGame() {
-            alert("Time's up! Game ended.");
-            // Could redirect to results screen or back to lobby
-        }
-        
-        // Listen for game updates
-        database.ref(`rooms/${roomCode}/submissions`).on('value', (snapshot) => {
-            const submissions = snapshot.val() || {};
-            updateSubmissionsList(submissions);
-        });
-        
-        // Submit word button handler
-        const submitWordBtn = document.getElementById('submit-word-btn');
-        submitWordBtn?.addEventListener('click', async () => {
-            const wordInput = document.getElementById('word-input') as HTMLInputElement;
-            const word = wordInput?.value.trim().toLowerCase();
-            
-            if (!word) {
-                alert('Please enter a word');
+            if (!roomCode) {
+                alert('No room code provided');
+                window.location.href = '/';
                 return;
             }
             
-            try {
-                await database.ref(`rooms/${roomCode}/submissions/${currentPlayer.id}`).set({
-                    playerId: currentPlayer.id,
-                    playerName: currentPlayer.name,
-                    word: word,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
-                
-                wordInput.value = '';
-                
-                // Show success message briefly
-                const messageArea = document.getElementById('message-area');
-                if (messageArea) {
-                    messageArea.innerHTML = '<div class="success">Word submitted!</div>';
-                    setTimeout(() => {
-                        messageArea.innerHTML = '';
-                    }, 3000);
-                }
-                
-            } catch (error) {
-                console.error('Error submitting word:', error);
-                alert('Failed to submit word');
-            }
-        });
-        
-        // Leave game button handler
-        const leaveGameBtn = document.getElementById('leave-game-btn');
-        leaveGameBtn?.addEventListener('click', async () => {
-            try {
-                await database.ref(`rooms/${roomCode}/players/${currentPlayer.id}`).remove();
-                
-                // Clean up listeners
-                database.ref(`rooms/${roomCode}`).off();
-                database.ref(`rooms/${roomCode}/submissions`).off();
-                
-                // Clean up timer
-                if (gameTimer) {
-                    clearInterval(gameTimer);
-                    gameTimer = null;
-                }
-                
-                // Clear localStorage
-                localStorage.removeItem('currentRoom');
-                localStorage.removeItem('currentPlayer');
-                
+            // Get current player from localStorage
+            const currentPlayerStr = localStorage.getItem('currentPlayer');
+            if (!currentPlayerStr) {
+                alert('No player data found');
                 window.location.href = '/';
-                
-            } catch (error) {
-                console.error('Error leaving room:', error);
-                alert('Failed to leave room');
+                return;
             }
-        });
-        
-        // Handle Enter key for word submission
-        const wordInput = document.getElementById('word-input') as HTMLInputElement;
-        wordInput?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                submitWordBtn?.click();
+            
+            const currentPlayer = JSON.parse(currentPlayerStr);
+            
+            // Import Firebase singleton and get room data
+            const { getDatabase } = await import('../lib/firebase');
+            const database = getDatabase();
+            
+            // Get initial room data and start the game
+            const roomSnapshot = await database.ref(`rooms/${roomCode}`).once('value');
+            const roomData: Room = roomSnapshot.val();
+            
+            if (!roomData || roomData.status !== 'playing') {
+                alert('Game not found or not started');
+                window.location.href = '/';
+                return;
             }
-        });
+            
+            // Create game controller and event handler
+            gameController = await createGameController(roomCode, currentPlayer);
+            eventHandler = createGameEventHandler(gameController);
+            
+            // Initialize game screen
+            gameController.startGameScreen(roomData);
+            
+            // Set up game listeners
+            gameController.setupGameListeners();
+            
+        } catch (error) {
+            console.error('Error initializing game:', error);
+            alert('Failed to initialize game');
+            window.location.href = '/';
+        }
+    });
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        if (gameController) {
+            gameController.cleanup();
+        }
+        if (eventHandler) {
+            eventHandler.cleanup();
+        }
     });
 </script>
