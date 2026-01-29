@@ -10,8 +10,9 @@ export interface Room {
     createdAt: any;
     hostId: string;
     prompt?: string;
-    secretWord?: Word;
-    selectedPlayerId?: string;
+    playerWords?: { [playerId: string]: Word[] }; // Each player gets 2 words
+    publicWords?: Word[]; // n+1 public words
+    publicWordChoices?: { [playerId: string]: Word }; // Each player's chosen public word (private)
     startTime?: any;
     duration?: number;
     submissions?: { [key: string]: any };

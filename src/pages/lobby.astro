@@ -94,42 +94,39 @@ import PlayerList from '../components/PlayerList.astro';
             if (!currentPlayer.isHost) return;
             
             try {
-                // Sample prompts and words
-                const prompts = [
-                    "Animals", "Foods", "Colors", "Countries", "Movies",
-                    "Sports", "Professions", "Things that are round",
-                    "Things you find in a kitchen", "Words that start with 'B'"
-                ];
+                // Import word selection
+                const { pickRandomWords } = await import('../lib/words');
                 
-                const wordsByPrompt: { [key: string]: string[] } = {
-                    "Animals": ["cat", "dog", "elephant", "tiger", "bird", "fish", "horse", "cow"],
-                    "Foods": ["pizza", "burger", "salad", "pasta", "soup", "bread", "cheese", "fruit"],
-                    "Colors": ["red", "blue", "green", "yellow", "purple", "orange", "pink", "black"],
-                    "Countries": ["france", "japan", "brazil", "canada", "italy", "spain", "germany", "china"],
-                    "Movies": ["avatar", "titanic", "batman", "superman", "starwars", "marvel", "disney", "action"],
-                    "Sports": ["football", "basketball", "tennis", "soccer", "baseball", "swimming", "running", "golf"],
-                    "Professions": ["doctor", "teacher", "engineer", "artist", "chef", "pilot", "nurse", "lawyer"],
-                    "Things that are round": ["ball", "coin", "wheel", "planet", "orange", "clock", "ring", "button"],
-                    "Things you find in a kitchen": ["stove", "fridge", "knife", "plate", "cup", "spoon", "sink", "oven"],
-                    "Words that start with 'B'": ["banana", "butterfly", "book", "building", "bridge", "bottle", "bicycle", "bird"]
-                };
-                
-                // Select random prompt and secret word
-                const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
-                const wordsForPrompt = wordsByPrompt[randomPrompt] || [];
-                const secretWord = wordsForPrompt[Math.floor(Math.random() * wordsForPrompt.length)] || 'default';
-                
-                // Get all players and randomly select one to be "it"
+                // Get all players
                 const roomSnapshot = await database.ref(`rooms/${roomCode}`).once('value');
                 const roomData = roomSnapshot.val();
                 const playerIds = Object.keys(roomData.players || {});
-                const selectedPlayerId = playerIds[Math.floor(Math.random() * playerIds.length)];
+                const playerCount = playerIds.length;
+                
+                // Calculate total words needed: (players × 2) + (players + 1)
+                const totalWordsNeeded = (playerCount * 2) + (playerCount + 1);
+                
+                // Pick random unique words using Fisher-Yates
+                const selectedWords = pickRandomWords(totalWordsNeeded);
+                
+                // Assign 2 words per player
+                const playerWords: { [key: string]: any[] } = {};
+                let wordIndex = 0;
+                
+                for (const playerId of playerIds) {
+                    playerWords[playerId] = [
+                        selectedWords[wordIndex++],
+                        selectedWords[wordIndex++]
+                    ];
+                }
+                
+                // Remaining words are public (n+1 words)
+                const publicWords = selectedWords.slice(wordIndex);
                 
                 const gameData = {
                     status: 'playing',
-                    prompt: randomPrompt,
-                    secretWord: secretWord,
-                    selectedPlayerId: selectedPlayerId,
+                    playerWords: playerWords,
+                    publicWords: publicWords,
                     startTime: Date.now(),
                     duration: 180, // 3 minutes
                     submissions: {}
