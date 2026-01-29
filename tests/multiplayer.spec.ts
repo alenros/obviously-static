@@ -57,7 +57,7 @@ test.describe('Two-Player Room Flow', () => {
     await player2Page.screenshot({ path: 'test-results/screenshots/player2-lobby.png', fullPage: true });
   });
 
-  test('Player 1 (host) can start game, both redirect to game page', async () => {
+  test('Player 1 (host) can start game, both redirect to game page, select public words', async () => {
     // Setup: Create room + join
     console.log('Setting up room for start game test...');
     roomCode = await createPlayerAndRoom(player1Page, 'Alice');
@@ -94,9 +94,53 @@ test.describe('Two-Player Room Flow', () => {
     
     console.log('✓ Game started successfully for both players');
     
-    // Take screenshots of final game state
+    // Wait for public words to appear
+    console.log('Waiting for public words...');
+    await expect(player1Page.locator('.word-item.clickable').first()).toBeVisible({ timeout: 5000 });
+    await expect(player2Page.locator('.word-item.clickable').first()).toBeVisible({ timeout: 5000 });
+    
+    // PLAYER 1: Select first public word
+    console.log('Player 1 selecting first public word...');
+    const player1Word = player1Page.locator('.word-item.clickable').first();
+    await player1Word.click();
+    await expect(player1Word).toHaveClass(/selected/);
+    
+    // PLAYER 1: Submit choice
+    console.log('Player 1 submitting choice...');
+    const player1SubmitBtn = player1Page.locator('#submit-choice-btn');
+    await expect(player1SubmitBtn).toBeEnabled();
+    await player1SubmitBtn.click();
+    await expect(player1SubmitBtn).toHaveText(/Choice Submitted/);
+    
+    // Wait for Player 2 to see Player 1's checkmark
+    await player2Page.waitForTimeout(1000);
+    
+    // Take screenshot from Player 2's POV showing Player 1 has submitted
+    await player2Page.screenshot({ path: 'test-results/screenshots/player2-sees-player1-submitted.png', fullPage: true });
+    console.log('✓ Screenshot taken: Player 2 sees Player 1 submitted');
+    
+    // PLAYER 2: Select second public word
+    console.log('Player 2 selecting second public word...');
+    const player2Word = player2Page.locator('.word-item.clickable').nth(1);
+    await player2Word.click();
+    await expect(player2Word).toHaveClass(/selected/);
+    
+    // PLAYER 2: Submit choice
+    console.log('Player 2 submitting choice...');
+    const player2SubmitBtn = player2Page.locator('#submit-choice-btn');
+    await expect(player2SubmitBtn).toBeEnabled();
+    await player2SubmitBtn.click();
+    await expect(player2SubmitBtn).toHaveText(/Choice Submitted/);
+    
+    // Wait a moment for Firebase sync and checkmark removal
+    await player1Page.waitForTimeout(1500);
+    
+    console.log('✓ Both players submitted their public word choices');
+    
+    // Take screenshots of final game state (after both submitted - checkmarks should be gone)
     await player1Page.screenshot({ path: 'test-results/screenshots/player1-game.png', fullPage: true });
     await player2Page.screenshot({ path: 'test-results/screenshots/player2-game.png', fullPage: true });
+    console.log('✓ Screenshots taken: Both submitted, checkmarks removed');
   });
 });
 
