@@ -11,7 +11,8 @@
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "test:headed": "playwright test --headed",
-    "test:screenshots": "cross-env SCREENSHOTS=1 playwright test"
+    "test:screenshots": "cross-env SCREENSHOTS=1 playwright test",
+    "cleanup:firebase": "node scripts/cleanup-old-rooms.js"
   },
   "dependencies": {
     "astro": "^5.13.6",
