@@ -272,6 +272,61 @@
             color: #856404;
         }
 
+        #word-replacement-container {
+            margin: 20px 0;
+            padding: 20px;
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+        }
+
+        #word-replacement-container h4 {
+            margin: 0 0 12px 0;
+            color: #856404;
+        }
+
+        #my-words-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .replacement-word {
+            padding: 12px 20px;
+            background: white;
+            border: 2px solid #ffc107;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .replacement-word:hover {
+            background: #fff9e6;
+            transform: scale(1.05);
+        }
+
+        .replacement-word.selected {
+            background: #856404;
+            color: white;
+            border-color: #856404;
+        }
+
+        #next-round-btn {
+            margin-top: 20px;
+            padding: 12px 32px;
+            font-size: 18px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #next-round-btn:hover {
+            transform: scale(1.05);
+        }
+
         .error {
             background: #f8d7da;
             color: #721c24;

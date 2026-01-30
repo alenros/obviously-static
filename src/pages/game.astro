@@ -236,6 +236,10 @@ import type { Room } from '../lib/room';
                         const updatedRoom = roomSnapshot.val();
                         displayReveal(updatedRoom);
                     });
+                } else if (revealed === false) {
+                    // Round reset - reload the page to reinitialize
+                    hasRevealed = false;
+                    window.location.reload();
                 }
             });
             
@@ -287,18 +291,29 @@ import type { Room } from '../lib/room';
             if (!container) return;
             
             // Count word occurrences
-            const wordCounts: { [wordText: string]: { playerNames: string[], count: number } } = {};
+            const wordCounts: { [wordText: string]: { playerNames: string[], playerIds: string[], count: number } } = {};
             
             Object.entries(roomData.publicWordChoices || {}).forEach(([playerId, word]: [string, any]) => {
                 if (!wordCounts[word.text]) {
-                    wordCounts[word.text] = { playerNames: [], count: 0 };
+                    wordCounts[word.text] = { playerNames: [], playerIds: [], count: 0 };
                 }
                 const player = roomData.players[playerId];
                 wordCounts[word.text].playerNames.push(player.name);
+                wordCounts[word.text].playerIds.push(playerId);
                 wordCounts[word.text].count++;
             });
             
             const hasDuplicates = Object.values(wordCounts).some(wc => wc.count > 1);
+            
+            // Find which players failed (chose duplicates)
+            const failedPlayerIds = new Set<string>();
+            Object.values(wordCounts).forEach(data => {
+                if (data.count > 1) {
+                    data.playerIds.forEach(id => failedPlayerIds.add(id));
+                }
+            });
+            
+            const currentPlayerFailed = failedPlayerIds.has(currentPlayer.id);
             
             container.innerHTML = `
                 <h3>Choices Revealed!</h3>
@@ -311,6 +326,8 @@ import type { Room } from '../lib/room';
                     </div>
                 </div>
                 <div id="revealed-choices"></div>
+                ${currentPlayerFailed ? '<div id="word-replacement-container"></div>' : ''}
+                ${currentPlayer.isHost ? '<button id="next-round-btn" style="margin-top: 20px;">Next Round</button>' : '<p style="margin-top: 20px;">Waiting for host to start next round...</p>'}
             `;
             
             const choicesContainer = document.getElementById('revealed-choices');
@@ -326,6 +343,103 @@ import type { Room } from '../lib/room';
                 `;
                 choicesContainer.appendChild(wordDiv);
             });
+            
+            // Show word replacement UI for failed players
+            if (currentPlayerFailed) {
+                showWordReplacementUI(roomData);
+            }
+            
+            // Attach next round handler for host
+            if (currentPlayer.isHost) {
+                const nextRoundBtn = document.getElementById('next-round-btn');
+                nextRoundBtn?.addEventListener('click', () => startNextRound(roomCode, roomData));
+            }
+        }
+        
+        // Function to show word replacement UI for failed players
+        function showWordReplacementUI(roomData: any) {
+            const container = document.getElementById('word-replacement-container');
+            if (!container) return;
+            
+            const myWords = roomData.playerWords?.[currentPlayer.id] || [];
+            
+            container.innerHTML = `
+                <h4>Choose a word to replace:</h4>
+                <div id="my-words-list"></div>
+            `;
+            
+            const wordsList = document.getElementById('my-words-list');
+            if (!wordsList) return;
+            
+            myWords.forEach((word: any, index: number) => {
+                const wordDiv = document.createElement('div');
+                wordDiv.className = 'word-item clickable replacement-word';
+                wordDiv.textContent = word.text;
+                wordDiv.dataset.index = index.toString();
+                
+                wordDiv.addEventListener('click', async () => {
+                    // Mark for replacement
+                    document.querySelectorAll('.replacement-word').forEach(w => w.classList.remove('selected'));
+                    wordDiv.classList.add('selected');
+                    
+                    // Store replacement choice
+                    await database.ref(`rooms/${roomCode}/replacements/${currentPlayer.id}`).set({
+                        wordIndex: index,
+                        ready: true
+                    });
+                });
+                
+                wordsList.appendChild(wordDiv);
+            });
+        }
+        
+        // Function to start next round (host only)
+        async function startNextRound(roomCode: string, roomData: any) {
+            try {
+                const { pickRandomWords } = await import('../lib/words');
+                
+                // Get replacement info
+                const replacementsSnapshot = await database.ref(`rooms/${roomCode}/replacements`).once('value');
+                const replacements = replacementsSnapshot.val() || {};
+                
+                const playerIds = Object.keys(roomData.players);
+                const playerCount = playerIds.length;
+                
+                // Calculate words needed
+                const totalWordsNeeded = (playerCount * 2) + (playerCount + 1);
+                const selectedWords = pickRandomWords(totalWordsNeeded);
+                
+                // Update player words (replace failed players' words)
+                const updatedPlayerWords: any = { ...roomData.playerWords };
+                let wordIndex = 0;
+                
+                for (const playerId of playerIds) {
+                    if (replacements[playerId]) {
+                        // This player failed - replace their chosen word
+                        const replaceIndex = replacements[playerId].wordIndex;
+                        const currentWords = [...updatedPlayerWords[playerId]];
+                        currentWords[replaceIndex] = selectedWords[wordIndex++];
+                        updatedPlayerWords[playerId] = currentWords;
+                    }
+                }
+                
+                // Remaining words are new public words
+                const publicWords = selectedWords.slice(wordIndex);
+                
+                // Update room for next round
+                await database.ref(`rooms/${roomCode}`).update({
+                    publicWords: publicWords,
+                    playerWords: updatedPlayerWords,
+                    publicWordChoices: null, // Clear previous choices
+                    choicesRevealed: false,
+                    replacements: null, // Clear replacements
+                    startTime: Date.now()
+                });
+                
+            } catch (error) {
+                console.error('Error starting next round:', error);
+                alert('Failed to start next round');
+            }
         }
         
         // Function to end game
