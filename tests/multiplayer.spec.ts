@@ -132,15 +132,16 @@ test.describe('Two-Player Room Flow', () => {
     await player2SubmitBtn.click();
     await expect(player2SubmitBtn).toHaveText(/Choice Submitted/);
     
-    // Wait a moment for Firebase sync and checkmark removal
-    await player1Page.waitForTimeout(1500);
+    // Wait for reveal to trigger and display
+    console.log('Waiting for choices to be revealed...');
+    await player1Page.waitForTimeout(3000);
     
     console.log('✓ Both players submitted their public word choices');
     
-    // Take screenshots of final game state (after both submitted - checkmarks should be gone)
-    await player1Page.screenshot({ path: 'test-results/screenshots/player1-game.png', fullPage: true });
-    await player2Page.screenshot({ path: 'test-results/screenshots/player2-game.png', fullPage: true });
-    console.log('✓ Screenshots taken: Both submitted, checkmarks removed');
+    // Take screenshots of final state (should show reveal if it triggered)
+    await player1Page.screenshot({ path: 'test-results/screenshots/player1-game-final.png', fullPage: true });
+    await player2Page.screenshot({ path: 'test-results/screenshots/player2-game-final.png', fullPage: true });
+    console.log('✓ Screenshots taken: Final game state');
   });
 });
 
@@ -196,6 +197,152 @@ test.describe('Edge Cases', () => {
     
     // Take screenshot of validation state
     await playerPage.screenshot({ path: 'test-results/screenshots/empty-name-validation.png', fullPage: true });
+  });
+});
+
+test.describe('Scoring System', () => {
+  let browser: Browser;
+  let player1Context: BrowserContext;
+  let player2Context: BrowserContext;
+  let player1Page: Page;
+  let player2Page: Page;
+  let roomCode: string;
+
+  test.beforeAll(async () => {
+    browser = await chromium.launch();
+    player1Context = await browser.newContext();
+    player2Context = await browser.newContext();
+    player1Page = await player1Context.newPage();
+    player2Page = await player2Context.newPage();
+  });
+
+  test.beforeEach(async () => {
+    // Ensure clean state before each test
+    roomCode = '';
+  });
+
+  test.afterEach(async () => {
+    // Clean up room after each test to prevent state carryover
+    if (roomCode) {
+      console.log(`Cleaning up room ${roomCode}...`);
+      await cleanupRoom(roomCode);
+      roomCode = '';
+    }
+  });
+
+  test.afterAll(async () => {
+    await browser.close();
+  });
+
+  test('Different words selected - should award a point', async () => {
+    console.log('Testing different word selection (point scenario)...');
+    
+    // Setup: Create room, join, start game
+    roomCode = await createPlayerAndRoom(player1Page, 'Alice');
+    await joinRoom(player2Page, 'Bob', roomCode);
+    await waitForPlayer(player1Page, 'Bob');
+    
+    const startButton = player1Page.locator('button:has-text("Start Game"), #start-game-btn');
+    await startButton.click();
+    
+    await Promise.all([
+      player1Page.waitForURL(/\/game\?code=/),
+      player2Page.waitForURL(/\/game\?code=/)
+    ]);
+    
+    // Wait for public words to appear
+    await expect(player1Page.locator('.word-item.clickable').first()).toBeVisible({ timeout: 5000 });
+    await expect(player2Page.locator('.word-item.clickable').first()).toBeVisible({ timeout: 5000 });
+    
+    // Player 1 selects FIRST word
+    console.log('Player 1 selecting first word...');
+    const player1Word = player1Page.locator('.word-item.clickable').first();
+    await player1Word.click();
+    await player1Page.locator('#submit-choice-btn').click();
+    
+    // Player 2 selects SECOND word (different from Player 1)
+    console.log('Player 2 selecting second word (different)...');
+    const player2Word = player2Page.locator('.word-item.clickable').nth(1);
+    await player2Word.click();
+    await player2Page.locator('#submit-choice-btn').click();
+    
+    // Wait for reveal
+    console.log('Waiting for reveal...');
+    await player1Page.waitForTimeout(3000);
+    
+    // Check for reveal display
+    await expect(player1Page.locator('text=Choices Revealed!')).toBeVisible({ timeout: 5000 });
+    
+    // Verify point was awarded
+    const pointsDisplay = player1Page.locator('.score-item:has-text("Points:")');
+    await expect(pointsDisplay).toContainText('1');
+    
+    // Verify no foul
+    const foulsDisplay = player1Page.locator('.score-item:has-text("Fouls:")');
+    await expect(foulsDisplay).toContainText('0');
+    
+    console.log('✓ Point awarded for different words');
+    
+    // Take screenshots
+    await player1Page.screenshot({ path: 'test-results/screenshots/different-words-player1.png', fullPage: true });
+    await player2Page.screenshot({ path: 'test-results/screenshots/different-words-player2.png', fullPage: true });
+  });
+
+  test('Same word selected - should award a foul', async () => {
+    console.log('Testing same word selection (foul scenario)...');
+    
+    // Setup: Create room, join, start game
+    roomCode = await createPlayerAndRoom(player1Page, 'Alice');
+    await joinRoom(player2Page, 'Bob', roomCode);
+    await waitForPlayer(player1Page, 'Bob');
+    
+    const startButton = player1Page.locator('button:has-text("Start Game"), #start-game-btn');
+    await startButton.click();
+    
+    await Promise.all([
+      player1Page.waitForURL(/\/game\?code=/),
+      player2Page.waitForURL(/\/game\?code=/)
+    ]);
+    
+    // Wait for public words to appear
+    await expect(player1Page.locator('.word-item.clickable').first()).toBeVisible({ timeout: 5000 });
+    await expect(player2Page.locator('.word-item.clickable').first()).toBeVisible({ timeout: 5000 });
+    
+    // Player 1 selects FIRST word
+    console.log('Player 1 selecting first word...');
+    const player1Word = player1Page.locator('.word-item.clickable').first();
+    await player1Word.click();
+    await player1Page.locator('#submit-choice-btn').click();
+    
+    // Player 2 ALSO selects FIRST word (same as Player 1)
+    console.log('Player 2 selecting first word (same as Player 1)...');
+    const player2Word = player2Page.locator('.word-item.clickable').first();
+    await player2Word.click();
+    await player2Page.locator('#submit-choice-btn').click();
+    
+    // Wait for reveal
+    console.log('Waiting for reveal...');
+    await player1Page.waitForTimeout(3000);
+    
+    // Check for reveal display
+    await expect(player1Page.locator('text=Choices Revealed!')).toBeVisible({ timeout: 5000 });
+    
+    // Verify foul was awarded
+    const foulsDisplay = player1Page.locator('.score-item:has-text("Fouls:")');
+    await expect(foulsDisplay).toContainText('1');
+    
+    // Verify no point
+    const pointsDisplay = player1Page.locator('.score-item:has-text("Points:")');
+    await expect(pointsDisplay).toContainText('0');
+    
+    // Verify duplicate highlighting
+    await expect(player1Page.locator('.revealed-word.duplicate')).toBeVisible();
+    
+    console.log('✓ Foul awarded for same word selection');
+    
+    // Take screenshots
+    await player1Page.screenshot({ path: 'test-results/screenshots/same-word-player1.png', fullPage: true });
+    await player2Page.screenshot({ path: 'test-results/screenshots/same-word-player2.png', fullPage: true });
   });
 });
 

@@ -49,12 +49,17 @@ export async function joinRoom(page: Page, playerName: string, roomCode: string)
  * @param roomCode - Room code to delete
  */
 export async function cleanupRoom(roomCode: string): Promise<void> {
+  if (!roomCode) return;
+  
   try {
     // Dynamic import to avoid build-time Firebase initialization
     const { getDatabase } = await import('../src/lib/firebase');
     const db = getDatabase();
     await db.ref(`rooms/${roomCode}`).remove();
     console.log(`Cleaned up room: ${roomCode}`);
+    
+    // Wait a bit to ensure Firebase propagates the deletion
+    await new Promise(resolve => setTimeout(resolve, 500));
   } catch (error) {
     console.warn(`Failed to cleanup room ${roomCode}:`, error);
   }
