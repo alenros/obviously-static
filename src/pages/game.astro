@@ -208,15 +208,124 @@ import type { Room } from '../lib/room';
             // Update players list with their assigned words
             updateGamePlayersList(roomData.players, roomData.playerWords || {}, roomData.publicWordChoices || {});
             
+            // Track if we've already revealed
+            let hasRevealed = false;
+            
             // Listen for public word choice updates
-            database.ref(`rooms/${roomCode}/publicWordChoices`).on('value', (snapshot) => {
+            database.ref(`rooms/${roomCode}/publicWordChoices`).on('value', async (snapshot) => {
                 const choices = snapshot.val() || {};
                 updateGamePlayersList(roomData.players, roomData.playerWords || {}, choices);
+                
+                // Check if all players have submitted
+                const playerIds = Object.keys(roomData.players);
+                const allSubmitted = playerIds.every(id => choices[id]);
+                
+                if (allSubmitted && !hasRevealed) {
+                    hasRevealed = true;
+                    // Reveal choices and calculate score
+                    await revealChoices(roomCode, roomData.players, choices);
+                }
+            });
+            
+            // Listen for reveal state changes
+            database.ref(`rooms/${roomCode}/choicesRevealed`).on('value', (snapshot) => {
+                const revealed = snapshot.val();
+                if (revealed) {
+                    // Refresh room data to get updated points/fouls
+                    database.ref(`rooms/${roomCode}`).once('value', (roomSnapshot) => {
+                        const updatedRoom = roomSnapshot.val();
+                        displayReveal(updatedRoom);
+                    });
+                }
             });
             
             // Start timer
             const startTime = roomData.startTime || Date.now();
             startServerBasedTimer(startTime, roomData.duration || 180);
+        }
+        
+        // Function to reveal choices and calculate score
+        async function revealChoices(roomCode: string, players: any, choices: any) {
+            try {
+                // Count how many times each word was chosen
+                const wordCounts: { [wordText: string]: string[] } = {}; // word -> playerIds[]
+                
+                Object.entries(choices).forEach(([playerId, word]: [string, any]) => {
+                    if (!wordCounts[word.text]) {
+                        wordCounts[word.text] = [];
+                    }
+                    wordCounts[word.text].push(playerId);
+                });
+                
+                // Check if all words are unique
+                const duplicates = Object.entries(wordCounts).filter(([_, playerIds]) => playerIds.length > 1);
+                
+                const updates: any = {
+                    choicesRevealed: true
+                };
+                
+                if (duplicates.length === 0) {
+                    // All unique! Award a point
+                    const currentPoints = (await database.ref(`rooms/${roomCode}/points`).once('value')).val() || 0;
+                    updates.points = currentPoints + 1;
+                } else {
+                    // Duplicates found! Award a foul
+                    const currentFouls = (await database.ref(`rooms/${roomCode}/fouls`).once('value')).val() || 0;
+                    updates.fouls = currentFouls + 1;
+                }
+                
+                await database.ref(`rooms/${roomCode}`).update(updates);
+                
+            } catch (error) {
+                console.error('Error revealing choices:', error);
+            }
+        }
+        
+        // Function to display the reveal
+        function displayReveal(roomData: any) {
+            const container = document.getElementById('public-words-container');
+            if (!container) return;
+            
+            // Count word occurrences
+            const wordCounts: { [wordText: string]: { playerNames: string[], count: number } } = {};
+            
+            Object.entries(roomData.publicWordChoices || {}).forEach(([playerId, word]: [string, any]) => {
+                if (!wordCounts[word.text]) {
+                    wordCounts[word.text] = { playerNames: [], count: 0 };
+                }
+                const player = roomData.players[playerId];
+                wordCounts[word.text].playerNames.push(player.name);
+                wordCounts[word.text].count++;
+            });
+            
+            const hasDuplicates = Object.values(wordCounts).some(wc => wc.count > 1);
+            
+            container.innerHTML = `
+                <h3>Choices Revealed!</h3>
+                <div class="score-display">
+                    <div class="score-item ${hasDuplicates ? '' : 'success'}">
+                        Points: ${roomData.points || 0}
+                    </div>
+                    <div class="score-item ${hasDuplicates ? 'error' : ''}">
+                        Fouls: ${roomData.fouls || 0}
+                    </div>
+                </div>
+                <div id="revealed-choices"></div>
+            `;
+            
+            const choicesContainer = document.getElementById('revealed-choices');
+            if (!choicesContainer) return;
+            
+            Object.entries(wordCounts).forEach(([wordText, data]) => {
+                const isDuplicate = data.count > 1;
+                const wordDiv = document.createElement('div');
+                wordDiv.className = `revealed-word ${isDuplicate ? 'duplicate' : ''}`;
+                wordDiv.innerHTML = `
+                    <span class="word-text">${wordText}</span>
+                    <span class="word-choosers">${data.playerNames.join(', ')}</span>
+                `;
+                choicesContainer.appendChild(wordDiv);
+            });
         }
         
         // Function to end game

@@ -13,6 +13,9 @@ export interface Room {
     playerWords?: { [playerId: string]: Word[] }; // Each player gets 2 words
     publicWords?: Word[]; // n+1 public words
     publicWordChoices?: { [playerId: string]: Word }; // Each player's chosen public word (private)
+    choicesRevealed?: boolean; // True when all players submitted and choices are revealed
+    points?: number; // Team points
+    fouls?: number; // Team fouls
     startTime?: any;
     duration?: number;
     submissions?: { [key: string]: any };
