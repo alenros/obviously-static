@@ -4,15 +4,15 @@ import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
 import { getAnalytics, type Analytics } from 'firebase/analytics';
 
-// Firebase configuration - centralized in one place
+// Firebase configuration from environment variables
 const firebaseConfig = {
-    apiKey: "AIzaSyDDVlYgTLskL79p2-h3X6Ma9GJhqAMixOk",
-    authDomain: "fake-artist-2384e.firebaseapp.com",
-    databaseURL: "https://fake-artist-2384e-default-rtdb.firebaseio.com/",
-    projectId: "fake-artist-2384e",
-    storageBucket: "fake-artist-2384e.firebasestorage.app",
-    messagingSenderId: "927881312706",
-    appId: "1:927881312706:web:a4e96f46b8c85db39b4e9b"
+    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+    authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
+    databaseURL: import.meta.env.PUBLIC_FIREBASE_DATABASE_URL,
+    projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.PUBLIC_FIREBASE_APP_ID
 };
 
 // Singleton Firebase instance
