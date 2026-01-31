@@ -361,8 +361,12 @@ test.describe('Scoring System', () => {
       player2Page.waitForURL(/\/game\?code=/)
     ]);
     
-    // Wait for public words to appear
-    await expect(player1Page.locator('.word-item.clickable').first()).toBeVisible({ timeout: 5000 });
+    console.log('Waiting for public words container...');
+    await expect(player1Page.locator('#public-words-list')).toBeVisible({ timeout: 10000 });
+    
+    // Wait for public words to appear with longer timeout
+    console.log('Waiting for clickable words...');
+    await expect(player1Page.locator('.word-item.clickable').first()).toBeVisible({ timeout: 10000 });
     
     // Capture first round's words
     console.log('Capturing Round 1 words...');
