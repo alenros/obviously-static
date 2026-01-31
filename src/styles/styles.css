@@ -23,6 +23,16 @@
             text-align: center;
         }
 
+        .logo-container {
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+        }
+
         h1 {
             color: #333;
             margin-bottom: 30px;

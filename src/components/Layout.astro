@@ -17,7 +17,9 @@ const { title = "Obviously - Multiplayer Game" } = Astro.props;
 </head>
 <body>
     <div class="container">
-        <h1>Obviously<span class="exclamation">!</span></h1>
+        <div class="logo-container">
+            <img src="/logo.jpg" alt="Obviously" class="logo" />
+        </div>
         <slot />
         <div id="message-area"></div>
     </div>
