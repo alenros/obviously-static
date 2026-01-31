@@ -15,6 +15,9 @@ import Layout from '../components/Layout.astro';
 </Layout>
 
 <script>
+    // Get base URL from Astro config
+    const BASE_URL = import.meta.env.BASE_URL;
+
     function generatePlayerId(): string {
         return 'player_' + Math.random().toString(36).substr(2, 9);
     }
@@ -30,7 +33,7 @@ import Layout from '../components/Layout.astro';
             
             if (!playerName) {
                 alert('Player name not found. Please go back to home.');
-                window.location.href = '/';
+                window.location.href = BASE_URL;
                 return;
             }
             
@@ -78,7 +81,7 @@ import Layout from '../components/Layout.astro';
                 localStorage.setItem('currentPlayer', JSON.stringify(currentPlayer));
                 
                 // Redirect to lobby
-                window.location.href = `/lobby?code=${roomCode}`;
+                window.location.href = `${BASE_URL}lobby?code=${roomCode}`;
                 
             } catch (error) {
                 console.error('Error joining room:', error);
@@ -87,7 +90,7 @@ import Layout from '../components/Layout.astro';
         });
 
         backBtn?.addEventListener('click', () => {
-            window.location.href = '/';
+            window.location.href = BASE_URL;
         });
 
         // Auto-focus the input field

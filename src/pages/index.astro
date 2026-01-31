@@ -14,6 +14,9 @@ import Layout from '../components/Layout.astro';
 </Layout>
 
 <script>
+    // Get base URL from Astro config
+    const BASE_URL = import.meta.env.BASE_URL;
+
     // Utility functions
     function generateRoomCode(): string {
         return Math.random().toString(36).substr(2, 6).toUpperCase();
@@ -83,7 +86,7 @@ import Layout from '../components/Layout.astro';
                 localStorage.setItem('currentPlayer', JSON.stringify(currentPlayer));
                 
                 // Redirect to lobby
-                window.location.href = `/lobby?code=${roomCode}`;
+                window.location.href = `${BASE_URL}lobby?code=${roomCode}`;
                 
             } catch (error) {
                 console.error('Error creating room:', error);
@@ -98,7 +101,7 @@ import Layout from '../components/Layout.astro';
                 return;
             }
             storePlayerName();
-            window.location.href = '/join';
+            window.location.href = `${BASE_URL}join`;
         });
 
         // Restore player name if returning to home page
