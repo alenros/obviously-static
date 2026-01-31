@@ -344,6 +344,91 @@ test.describe('Scoring System', () => {
     await player1Page.screenshot({ path: 'test-results/screenshots/same-word-player1.png', fullPage: true });
     await player2Page.screenshot({ path: 'test-results/screenshots/same-word-player2.png', fullPage: true });
   });
+
+  test('Next Round button generates new public words and resets UI', async () => {
+    console.log('Testing Next Round functionality...');
+    
+    // Setup: Create room, join, start game
+    roomCode = await createPlayerAndRoom(player1Page, 'Alice');
+    await joinRoom(player2Page, 'Bob', roomCode);
+    await waitForPlayer(player1Page, 'Bob');
+    
+    const startButton = player1Page.locator('button:has-text("Start Game"), #start-game-btn');
+    await startButton.click();
+    
+    await Promise.all([
+      player1Page.waitForURL(/\/game\?code=/),
+      player2Page.waitForURL(/\/game\?code=/)
+    ]);
+    
+    // Wait for public words to appear
+    await expect(player1Page.locator('.word-item.clickable').first()).toBeVisible({ timeout: 5000 });
+    
+    // Capture first round's words
+    console.log('Capturing Round 1 words...');
+    const round1Words = await player1Page.locator('.word-item.clickable').allTextContents();
+    console.log('Round 1 words:', round1Words);
+    
+    // Player 1 selects first word
+    console.log('Player 1 selecting word...');
+    await player1Page.locator('.word-item.clickable').first().click();
+    await player1Page.locator('#submit-choice-btn').click();
+    
+    // Player 2 selects different word
+    console.log('Player 2 selecting word...');
+    await player2Page.locator('.word-item.clickable').nth(1).click();
+    await player2Page.locator('#submit-choice-btn').click();
+    
+    // Wait for reveal
+    console.log('Waiting for reveal...');
+    await player1Page.waitForTimeout(3000);
+    await expect(player1Page.locator('text=Choices Revealed!')).toBeVisible({ timeout: 5000 });
+    
+    // Wait for Next Round button to appear
+    console.log('Waiting for Next Round button...');
+    const nextRoundButton = player1Page.locator('#next-round-btn, button:has-text("Next Round")');
+    await expect(nextRoundButton).toBeVisible({ timeout: 5000 });
+    
+    // Take screenshot before clicking Next Round
+    await player1Page.screenshot({ path: 'test-results/screenshots/next-round-before.png', fullPage: true });
+    
+    // Click Next Round
+    console.log('Clicking Next Round...');
+    await nextRoundButton.click();
+    
+    // Wait for reveal section to disappear (UI reset)
+    await expect(player1Page.locator('text=Choices Revealed!')).not.toBeVisible({ timeout: 5000 });
+    
+    // Wait for new words to appear
+    console.log('Waiting for new words...');
+    await expect(player1Page.locator('.word-item.clickable').first()).toBeVisible({ timeout: 5000 });
+    
+    // Capture second round's words
+    const round2Words = await player1Page.locator('.word-item.clickable').allTextContents();
+    console.log('Round 2 words:', round2Words);
+    
+    // Verify words are different
+    const wordsChanged = round1Words.some((word, index) => word !== round2Words[index]);
+    expect(wordsChanged).toBe(true);
+    console.log('✓ Public words changed after Next Round');
+    
+    // Verify submit button is reset
+    const submitButton = player1Page.locator('#submit-choice-btn');
+    await expect(submitButton).toBeEnabled();
+    await expect(submitButton).toHaveText(/Submit Choice/);
+    console.log('✓ Submit button reset');
+    
+    // Verify scores are preserved
+    const pointsDisplay = player1Page.locator('.score-item:has-text("Points:")');
+    await expect(pointsDisplay).toContainText('1'); // Should still show point from round 1
+    console.log('✓ Scores preserved across rounds');
+    
+    // Take screenshot after Next Round
+    await player1Page.screenshot({ path: 'test-results/screenshots/next-round-after.png', fullPage: true });
+    await player2Page.screenshot({ path: 'test-results/screenshots/next-round-player2.png', fullPage: true });
+    
+    console.log('✓ Next Round button works correctly');
+  });
 });
 
 test.describe('Non-Host Restrictions', () => {
