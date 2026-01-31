@@ -96,6 +96,16 @@ test.describe('Next Round Flow', () => {
     await player2Page.locator('.replacement-word').nth(1).click();
     await expect(player2Page.locator('.replacement-word.selected')).toBeVisible();
     
+    // Store current public words to verify they change
+    const firstRoundWords = await player1Page.locator('.word-item.clickable').allTextContents();
+    console.log(`First round had ${firstRoundWords.length} words:`, firstRoundWords);
+    
+    // Set up navigation listener to detect unwanted page reloads
+    let pageReloaded = false;
+    player1Page.on('framenavigated', () => {
+      pageReloaded = true;
+    });
+    
     // Host clicks Next Round
     console.log('Host starting next round...');
     await player1Page.locator('#next-round-btn').click();
@@ -103,11 +113,33 @@ test.describe('Next Round Flow', () => {
     // Wait for round to reset
     await player1Page.waitForTimeout(2000);
     
-    // Verify new public words appeared (choices cleared)
+    // VERIFY: No page reload occurred (smooth transition)
+    expect(pageReloaded).toBe(false);
+    console.log('✓ No page reload/flicker detected');
+    
+    // VERIFY: New public words appeared (choices cleared)
     await expect(player1Page.locator('#submit-choice-btn')).toBeVisible({ timeout: 5000 });
     await expect(player1Page.locator('#submit-choice-btn')).toContainText('Submit Choice');
+    await expect(player1Page.locator('#submit-choice-btn')).toBeEnabled();
     
-    console.log('✓ Next round started successfully');
+    // VERIFY: Correct number of public words (playerCount + 1 = 2 + 1 = 3)
+    const newRoundWords = await player1Page.locator('.word-item.clickable').allTextContents();
+    console.log(`Second round has ${newRoundWords.length} words:`, newRoundWords);
+    expect(newRoundWords.length).toBe(3);
+    console.log('✓ Correct number of public words (3 for 2 players)');
+    
+    // VERIFY: Words are different from first round (new words generated)
+    const wordsChanged = newRoundWords.some(word => !firstRoundWords.includes(word));
+    expect(wordsChanged).toBe(true);
+    console.log('✓ New words generated for next round');
+    
+    // VERIFY: Player 2 also sees the new round
+    await expect(player2Page.locator('.word-item.clickable').first()).toBeVisible({ timeout: 5000 });
+    const player2NewWords = await player2Page.locator('.word-item.clickable').allTextContents();
+    expect(player2NewWords.length).toBe(3);
+    console.log('✓ Player 2 sees correct word count');
+    
+    console.log('✓ Next round started successfully without issues');
     
     // Take screenshots of new round
     await player1Page.screenshot({ path: 'test-results/screenshots/new-round-player1.png', fullPage: true });

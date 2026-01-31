@@ -416,11 +416,16 @@ test.describe('Scoring System', () => {
     expect(wordsChanged).toBe(true);
     console.log('✓ Public words changed after Next Round');
     
-    // Verify submit button is reset
+    // Verify submit button is reset (should be disabled until word is selected)
     const submitButton = player1Page.locator('#submit-choice-btn');
-    await expect(submitButton).toBeEnabled();
+    await expect(submitButton).toBeDisabled();
     await expect(submitButton).toHaveText(/Submit Choice/);
-    console.log('✓ Submit button reset');
+    console.log('✓ Submit button reset to disabled state');
+    
+    // Select a word to verify button becomes enabled
+    await player1Page.locator('.word-item.clickable').first().click();
+    await expect(submitButton).toBeEnabled();
+    console.log('✓ Submit button enables after word selection');
     
     // Verify scores are preserved
     const pointsDisplay = player1Page.locator('.score-item:has-text("Points:")');

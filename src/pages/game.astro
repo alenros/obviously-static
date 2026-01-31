@@ -51,18 +51,28 @@ import type { Room } from '../lib/room';
         const { getDatabase, firebase } = await import('../lib/firebase');
         const database = getDatabase();
         
-        // Get initial room data and start the game
-        const roomSnapshot = await database.ref(`rooms/${roomCode}`).once('value');
-        const roomData : Room = roomSnapshot.val();
-        
-        if (!roomData || roomData.status !== 'playing') {
-            alert('Game not found or not started');
-            window.location.href = BASE_URL;
-            return;
-        }
-        
-        // Initialize game UI
-        startGameScreen(roomData);
+        // Wait for room to be in 'playing' status with publicWords loaded
+        let gameInitialized = false;
+        database.ref(`rooms/${roomCode}`).on('value', (snapshot) => {
+            const roomData: Room = snapshot.val();
+            
+            if (!roomData) {
+                alert('Room not found');
+                window.location.href = BASE_URL;
+                return;
+            }
+            
+            // Wait until status is 'playing' AND publicWords exist
+            if (roomData.status === 'playing' && roomData.publicWords && !gameInitialized) {
+                gameInitialized = true;
+                console.log('Game data loaded, starting game screen...');
+                // Initialize game UI
+                startGameScreen(roomData);
+            } else if (roomData.status !== 'playing' && !gameInitialized) {
+                // Not playing yet, keep waiting
+                console.log('Waiting for game to start...');
+            }
+        });
         
         // Function to update game players list with their words
         function updateGamePlayersList(players: any, playerWords: any, publicWordChoices: any = {}) {
