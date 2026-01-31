@@ -240,9 +240,17 @@ import type { Room } from '../lib/room';
                         displayReveal(updatedRoom);
                     });
                 } else if (revealed === false) {
-                    // Round reset - reload the page to reinitialize
+                    // Round reset - reinitialize without reload to avoid flicker
                     hasRevealed = false;
-                    window.location.reload();
+                    database.ref(`rooms/${roomCode}`).once('value', (roomSnapshot) => {
+                        const updatedRoom = roomSnapshot.val();
+                        if (updatedRoom && updatedRoom.status === 'playing') {
+                            // Clear submit state and restart
+                            hasSubmittedChoice = false;
+                            selectedPublicWord = null;
+                            startGameScreen(updatedRoom);
+                        }
+                    });
                 }
             });
             
@@ -408,8 +416,13 @@ import type { Room } from '../lib/room';
                 const playerIds = Object.keys(roomData.players);
                 const playerCount = playerIds.length;
                 
-                // Calculate words needed
-                const totalWordsNeeded = (playerCount * 2) + (playerCount + 1);
+                // Count how many players need replacements
+                const failedPlayers = Object.keys(replacements).filter(id => replacements[id]);
+                const replacementCount = failedPlayers.length;
+                
+                // Calculate words needed: replacements + public words
+                const publicWordCount = playerCount + 1;
+                const totalWordsNeeded = replacementCount + publicWordCount;
                 const selectedWords = pickRandomWords(totalWordsNeeded);
                 
                 // Update player words (replace failed players' words)
@@ -426,7 +439,7 @@ import type { Room } from '../lib/room';
                     }
                 }
                 
-                // Remaining words are new public words
+                // Remaining words are new public words (always playerCount + 1)
                 const publicWords = selectedWords.slice(wordIndex);
                 
                 // Update room for next round
