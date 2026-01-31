@@ -6,6 +6,7 @@ export interface Props {
 }
 
 const { title = "Obviously - Multiplayer Game" } = Astro.props;
+const baseUrl = import.meta.env.BASE_URL;
 ---
 
 <!DOCTYPE html>
@@ -18,7 +19,7 @@ const { title = "Obviously - Multiplayer Game" } = Astro.props;
 <body>
     <div class="container">
         <div class="logo-container">
-            <img src="/logo.jpg" alt="Obviously" class="logo" />
+            <img src={`${baseUrl}logo.jpg`} alt="Obviously" class="logo" />
         </div>
         <slot />
         <div id="message-area"></div>
