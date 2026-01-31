@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+
+// Load environment variables for tests
+dotenv.config();
 
 /**
  * Playwright configuration for obviously-static multiplayer tests
