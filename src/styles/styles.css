@@ -33,6 +33,22 @@
             background-clip: text;
         }
 
+        h1 .exclamation {
+            display: inline-block;
+            font-weight: 900;
+            transform: rotate(-12deg);
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: rotate(-12deg) translateY(0); }
+            50% { transform: rotate(-12deg) translateY(-8px); }
+        }
+
         .screen {
             display: none;
         }
@@ -224,18 +240,24 @@
             font-size: 18px;
             background: #f8f9fa;
             border: 2px solid #e1e5e9;
+            min-width: 120px;
+            text-align: center;
         }
 
         .score-item.success {
             background: #d4edda;
             border-color: #28a745;
             color: #155724;
+            font-weight: 600;
+            font-size: 18px;
         }
 
         .score-item.error {
             background: #f8d7da;
             border-color: #dc3545;
             color: #721c24;
+            font-weight: 600;
+            font-size: 18px;
         }
 
         #revealed-choices {

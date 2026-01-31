@@ -5,7 +5,7 @@ export interface Props {
     title?: string;
 }
 
-const { title = "Word Battle - Multiplayer Game" } = Astro.props;
+const { title = "Obviously - Multiplayer Game" } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -17,7 +17,7 @@ const { title = "Word Battle - Multiplayer Game" } = Astro.props;
 </head>
 <body>
     <div class="container">
-        <h1>Word Battle</h1>
+        <h1>Obviously<span class="exclamation">!</span></h1>
         <slot />
         <div id="message-area"></div>
     </div>
