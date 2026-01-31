@@ -102,10 +102,14 @@ import type { Room } from '../lib/room';
             const container = document.getElementById('public-words-container');
             if (!container) return;
             
+            // Reset the container with fresh HTML
             container.innerHTML = '<h3>Choose One Public Word</h3><div id="public-words-list"></div><button id="submit-choice-btn" disabled>Submit Choice</button>';
             
             const wordsList = document.getElementById('public-words-list');
             if (!wordsList) return;
+            
+            // Reset selection state (defensive - should already be reset)
+            selectedPublicWord = null;
             
             publicWords.forEach((word: any, index: number) => {
                 const wordDiv = document.createElement('div');
@@ -125,38 +129,43 @@ import type { Room } from '../lib/room';
                     
                     // Enable submit button
                     const submitBtn = document.getElementById('submit-choice-btn') as HTMLButtonElement;
-                    if (submitBtn) submitBtn.disabled = false;
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Submit Choice'; // Reset text too
+                    }
                 });
                 
                 wordsList.appendChild(wordDiv);
             });
             
-            // Submit choice button handler
+            // Submit choice button handler (using 'once' option to prevent duplicate handlers)
             const submitBtn = document.getElementById('submit-choice-btn');
-            submitBtn?.addEventListener('click', async () => {
-                if (!selectedPublicWord || hasSubmittedChoice) return;
-                
-                try {
-                    await database.ref(`rooms/${roomCode}/publicWordChoices/${currentPlayer.id}`).set(selectedPublicWord);
-                    hasSubmittedChoice = true;
+            if (submitBtn) {
+                submitBtn.addEventListener('click', async () => {
+                    if (!selectedPublicWord || hasSubmittedChoice) return;
                     
-                    const submitBtn = document.getElementById('submit-choice-btn') as HTMLButtonElement;
-                    if (submitBtn) {
-                        submitBtn.disabled = true;
-                        submitBtn.textContent = 'Choice Submitted ✓';
+                    try {
+                        await database.ref(`rooms/${roomCode}/publicWordChoices/${currentPlayer.id}`).set(selectedPublicWord);
+                        hasSubmittedChoice = true;
+                        
+                        const btn = document.getElementById('submit-choice-btn') as HTMLButtonElement;
+                        if (btn) {
+                            btn.disabled = true;
+                            btn.textContent = 'Choice Submitted ✓';
+                        }
+                        
+                        // Disable further clicks
+                        document.querySelectorAll('.word-item.clickable').forEach(w => {
+                            (w as HTMLElement).style.pointerEvents = 'none';
+                            (w as HTMLElement).style.opacity = '0.6';
+                        });
+                        
+                    } catch (error) {
+                        console.error('Error submitting choice:', error);
+                        alert('Failed to submit choice');
                     }
-                    
-                    // Disable further clicks
-                    document.querySelectorAll('.word-item.clickable').forEach(w => {
-                        (w as HTMLElement).style.pointerEvents = 'none';
-                        (w as HTMLElement).style.opacity = '0.6';
-                    });
-                    
-                } catch (error) {
-                    console.error('Error submitting choice:', error);
-                    alert('Failed to submit choice');
-                }
-            });
+                }, { once: true }); // Prevent duplicate event handlers
+            }
         }
         
         // Function to start the game timer
@@ -245,10 +254,18 @@ import type { Room } from '../lib/room';
                     database.ref(`rooms/${roomCode}`).once('value', (roomSnapshot) => {
                         const updatedRoom = roomSnapshot.val();
                         if (updatedRoom && updatedRoom.status === 'playing') {
-                            // Clear submit state and restart
+                            // Clear submit state and display new round
                             hasSubmittedChoice = false;
                             selectedPublicWord = null;
-                            startGameScreen(updatedRoom);
+                            displayPublicWords(updatedRoom.publicWords || []);
+                            updateGamePlayersList(updatedRoom.players, updatedRoom.playerWords || {}, updatedRoom.publicWordChoices || {});
+                            
+                            // Restart timer with new start time
+                            if (gameTimer) {
+                                clearInterval(gameTimer);
+                                gameTimer = null;
+                            }
+                            startServerBasedTimer(updatedRoom.startTime || Date.now(), updatedRoom.duration || 180);
                         }
                     });
                 }
