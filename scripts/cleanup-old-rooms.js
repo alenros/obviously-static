@@ -5,16 +5,20 @@
 
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
+import dotenv from 'dotenv';
 
-// Firebase configuration
+// Load environment variables from .env file
+dotenv.config();
+
+// Firebase configuration from environment variables
 const firebaseConfig = {
-    apiKey: "AIzaSyDDVlYgTLskL79p2-h3X6Ma9GJhqAMixOk",
-    authDomain: "fake-artist-2384e.firebaseapp.com",
-    databaseURL: "https://fake-artist-2384e-default-rtdb.firebaseio.com/",
-    projectId: "fake-artist-2384e",
-    storageBucket: "fake-artist-2384e.firebasestorage.app",
-    messagingSenderId: "927881312706",
-    appId: "1:927881312706:web:a4e96f46b8c85db39b4e9b"
+    apiKey: process.env.PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
+    databaseURL: process.env.PUBLIC_FIREBASE_DATABASE_URL,
+    projectId: process.env.PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.PUBLIC_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
