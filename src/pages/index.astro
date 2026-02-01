@@ -1,9 +1,14 @@
 ---
 import Layout from '../components/Layout.astro';
+
+const baseUrl = import.meta.env.BASE_URL;
 ---
 
 <Layout title="Obviously - Home">
     <div id="home-screen" class="screen active">
+        <div class="logo-container">
+            <img src={`${baseUrl}logo.jpg`} alt="Obviously" class="logo" />
+        </div>
         <div class="input-group">
             <label for="player-name">Your Name</label>
             <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
